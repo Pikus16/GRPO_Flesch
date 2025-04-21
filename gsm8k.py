@@ -59,12 +59,39 @@ def count_xml(text) -> float:
         count += 0.125 - (len(text.split("\n</answer>")[-1]) - 1)*0.001
     return count
 
-# ---------- Reward Functions ----------
-def flesch_kincaid_reward_func(completions, **kwargs):
-    responses = [c[0]['content'] for c in completions]
-    responses = [c.split("<reasoning>")[-1].split("</reasoning>")[0] for c in responses]
-    scores = [textstat.flesch_kincaid_grade(r) for r in responses]
-    return [3 if s <= 6 else 2 if s < 8 else 1 if s < 10 else 0 for s in scores]
+# # ---------- Reward Functions ----------
+# def flesch_kincaid_reward_func(completions, **kwargs):
+#     responses = [c[0]['content'] for c in completions]
+#     responses = [c.split("<reasoning>")[-1].split("</reasoning>")[0] for c in responses]
+#     scores = [textstat.flesch_kincaid_grade(r) for r in responses]
+#     return [3 if s <= 6 else 2 if s < 8 else 1 if s < 10 else 0 for s in scores]
+
+def flesch_kincaid_reward_func(completions, **kwargs) -> list[float]:
+    responses = [completion[0]['content'] for completion in completions]
+    reasoning_pattern = r"<reasoning>\n(.*?)\n</reasoning>"
+    final_scores = []
+
+    for response in responses:
+        match = re.search(reasoning_pattern, response, flags=re.DOTALL)
+        if match:
+            reasoning_text = match.group(1).strip()
+
+            # Word count check
+            if len(reasoning_text.split()) < 10:
+                final_scores.append(0.0)  # Too short to be meaningful
+                continue
+
+            # Flesch-Kincaid Grade (lower is easier to read)
+            fk_grade = textstat.flesch_kincaid_grade(reasoning_text)
+
+            # Smooth inverse scaling: lower grade → higher reward (max at FK = 0, min at FK = 10+)
+            normalized_score = max(0.0, min(10.0 - fk_grade, 10.0)) / 10.0
+            reward = normalized_score * 1.5
+            final_scores.append(reward)
+        else:
+            final_scores.append(0.0)  # No <reasoning> tag found
+    return final_scores
+
 
 def correctness_reward_func(prompts, completions, answer, **kwargs):
     responses = [c[0]['content'] for c in completions]
