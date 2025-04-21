@@ -178,7 +178,7 @@ def train(model, tokenizer, dataset,
     model.save_pretrained_merged(f"{save_path}/merged", tokenizer, save_method="lora")
 
 
-def run_inference(model, tokenizer):
+def run_inference(model, tokenizer, save_path):
     prompt = tokenizer.apply_chat_template([
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": "Calculate pi."},
@@ -188,7 +188,7 @@ def run_inference(model, tokenizer):
     output = model.fast_generate(
         prompt,
         sampling_params=sampling_params,
-        lora_request=model.load_lora("gsm8k_flesch_longrun/lora"),
+        lora_request=model.load_lora(f"{save_path}/lora"),
     )[0].outputs[0].text
     print("INFERENCE:\n", output)
 
@@ -208,7 +208,7 @@ def main(project, name, save_path):
     dataset = get_gsm8k_questions()
 
     train(model, tokenizer, dataset, save_path=save_path)
-    run_inference(model, tokenizer)
+    run_inference(model, tokenizer, save_path=save_path)
 
 if __name__ == '__main__':
     main()
