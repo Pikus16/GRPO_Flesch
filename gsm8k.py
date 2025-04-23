@@ -11,14 +11,14 @@ from datasets import load_dataset, Dataset
 
 # ---------- Constants ----------
 SYSTEM_PROMPT = """
-Respond in the following format:
+Respond in the following format. Make sure to include the reasoning and answer tags.
 <reasoning>
-...
+REASONING
 </reasoning>
 <answer>
-...
+INTEGER ANSWER
 </answer>
-"""
+""".strip()
 
 XML_COT_FORMAT = """\
 <reasoning>
@@ -118,20 +118,20 @@ def xmlcount_reward_func(completions, **kwargs):
     return [count_xml(c) for c in contents]
 
 # ---------- Main Functions ----------
-def load_model_and_tokenizer(max_seq_length: int = 1024):
+def load_model_and_tokenizer(max_seq_length: int = 2048, lora_rank: int = 16):
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name="meta-llama/meta-Llama-3.1-8B-Instruct",
         max_seq_length=max_seq_length,
         load_in_4bit=True,
         fast_inference=True,
-        max_lora_rank=32,
-        gpu_memory_utilization=0.6,
+        max_lora_rank=lora_rank,
+        gpu_memory_utilization=0.8,
     )
     model = FastLanguageModel.get_peft_model(
         model,
-        r=16,
+        r=lora_rank,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
-        lora_alpha=16,
+        lora_alpha=lora_rank,
         use_gradient_checkpointing="unsloth",
         random_state=3407,
     )
@@ -139,7 +139,7 @@ def load_model_and_tokenizer(max_seq_length: int = 1024):
 
 def train(model, tokenizer, dataset,
           save_path: str,
-          max_seq_length: int = 1024,
+          max_seq_length: int = 2048,
           max_prompt_length: int = 256):
     config = GRPOConfig(
         learning_rate=5e-6,
