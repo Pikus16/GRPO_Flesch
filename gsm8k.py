@@ -87,7 +87,7 @@ def flesch_kincaid_reward_func(completions, **kwargs) -> list[float]:
 
             # Smooth inverse scaling: lower grade → higher reward (max at FK = 0, min at FK = 10+)
             normalized_score = max(0.0, min(10.0 - fk_grade, 10.0)) / 10.0
-            reward = normalized_score * 3
+            reward = normalized_score * 2
             final_scores.append(reward)
         else:
             final_scores.append(0.0)  # No <reasoning> tag found
